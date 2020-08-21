@@ -1,5 +1,6 @@
 from flask import Flask, render_template, url_for, request, redirect
 import sqlite3
+from datetime import datetime
 app = Flask(__name__)
 
 conn = sqlite3.connect('interviews.db', check_same_thread=False)
@@ -49,9 +50,16 @@ c.execute('INSERT into interuser values(3,5);')
 conn.commit()
 
 
-# def compatible((S, E), L):
-#     for (e, s) in L:
-#         if not ()
+def compatible(X, L):
+    def f(x): return datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
+    S = f(X[0])
+    E = f(X[1])
+    for (s, e) in L:
+        s = f(e)
+        e = f(e)
+        if not (E <= s or e <= S):
+            return False
+    return True
 
 
 @app.route('/')
@@ -85,8 +93,8 @@ def createInterview():
             return render_template('create.html', error="All fields are required")
 
         UID = []
+        users = list(dict.fromkeys(users))
         for user in users:
-            print(f'-fffffffffffffffffff-{user}--')
             user = user.strip()
             with conn:
                 c.execute(f'SELECT id from users where name="{user}";')
@@ -102,15 +110,15 @@ def createInterview():
 
         start = start.replace('T', ' ') + ':00'
         end = end.replace('T', ' ') + ':00'
-        # for id in UID:
-        #     with conn:
-        #         c.execute(
-        #             f'select start, end from interviews where id in (SELECT interviewid FROM interuser where userid = {id})')
-        #         times = c.fetchall()
-        #     if not compatible((start, end), times):
-        #         with conn:
-        #             c.execute(f'Select name from users where id = {id}')
-        #         return render_template('create.html', error=f"user '{c.fetchone()[0]}' is not available in given schedule")
+        for id in UID:
+            with conn:
+                c.execute(
+                    f'select start, end from interviews where id in (SELECT interviewid FROM interuser where userid = {id})')
+                times = c.fetchall()
+            if not compatible((start, end), times):
+                with conn:
+                    c.execute(f'Select name from users where id = {id}')
+                return render_template('create.html', error=f"user '{c.fetchone()[0]}' is not available in given schedule")
 
         with conn:
             c.execute(
