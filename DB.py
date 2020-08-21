@@ -26,15 +26,17 @@ c.execute('''
         userid int FORIEGN KEY REFERENCES users(id)
     );
 ''')
-c.execute('INSERT into users(name) values("karthik");')
-c.execute('INSERT into users(name) values("malisetty");')
-c.execute('INSERT into users(name) values("John");')
-c.execute('INSERT into users(name) values("Doe");')
-c.execute('INSERT into users(name) values("IDK");')
 
-c.execute('INSERT into interviews(name, start, end) values("Interview1", "2020-10-05 10:00:00", "2020-10-05 12:00:00");')
-c.execute('INSERT into interviews(name, start, end) values("Interview2", "2020-10-05 13:00:00", "2020-10-05 15:00:00");')
-c.execute('INSERT into interviews(name, start, end) values("Interview3", "2020-10-05 11:00:00", "2020-10-05 12:30:00");')
+
+c.execute('INSERT into users(name) values("vamshi");')
+c.execute('INSERT into users(name) values("pavan");')
+c.execute('INSERT into users(name) values("dani");')
+c.execute('INSERT into users(name) values("ajit");')
+c.execute('INSERT into users(name) values("karthik");')
+
+c.execute('INSERT into interviews(name, start, end) values("Interviewbit", "2020-10-05 10:00:00", "2020-10-05 12:00:00");')
+c.execute('INSERT into interviews(name, start, end) values("google", "2020-10-05 13:00:00", "2020-10-05 15:00:00");')
+c.execute('INSERT into interviews(name, start, end) values("goldmansachs", "2020-10-05 11:00:00", "2020-10-05 12:30:00");')
 
 c.execute('INSERT into interuser values(1,1);')
 c.execute('INSERT into interuser values(1,2);')
