@@ -53,19 +53,41 @@
 		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
 		<title>Interview</title>
 	</head>
-	<body style="padding: 20px;">
-		<div style="width: 70%;">
-			<nav>
-				<ul>
-					<li><a href="{{url_for('home')}}">List Interviews</a></li>
-					<li>
-						<a href="{{url_for('createInterview')}}">
-							Create Interview
-						</a>
-					</li>
-				</ul>
-			</nav>
-			{% block content %}{% endblock %}
+	<body style="padding-top: 20px;">
+		<div class="container">
+			<div class="row">
+				<div class="col-md-10">
+					<nav>
+						<ul>
+							<li>
+								<a href="{{url_for('home')}}"
+									>List Interviews</a
+								>
+							</li>
+							<li>
+								<a href="{{url_for('createInterview')}}">
+									Create Interview
+								</a>
+							</li>
+						</ul>
+					</nav>
+					{% block content %}{% endblock %}
+				</div>
+				<div class="col-md-2">
+					<div class="card">
+						<div class="card-header">
+							<h5 class="card-title">Interviewees</h5>
+						</div>
+						<div class="card-body">
+							<ul>
+								{% for user in users%}
+								<li>{{user}}</li>
+								{%endfor%}
+							</ul>
+						</div>
+					</div>
+				</div>
+			</div>
 		</div>
 	</body>
 </html>

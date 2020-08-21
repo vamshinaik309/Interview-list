@@ -62,16 +62,21 @@ def compatible(X, L):
     return True
 
 
+def getUsers(ID):
+    c.execute(
+        f'SELECT name from users where id in (SELECT userid from interuser where interviewid={ID});')
+    st = []
+    for x in c.fetchall():
+        st.append(x[0])
+    return st
+
+
 @app.route('/')
 @app.route('/interviews-list')
 def home():
-    def getUsers(ID):
-        c.execute(
-            f'SELECT name from users where id in (SELECT userid from interuser where interviewid={ID});')
-        st = []
-        for x in c.fetchall():
-            st.append(x[0])
-        return st
+    params = {}
+    c.execute('SELECT name from users;')
+    params['users'] = [x[0] for x in c.fetchall()]
 
     c.execute('SELECT * from interviews;')
     interviews = [{'id': x[0],
@@ -79,23 +84,29 @@ def home():
                    'users': getUsers(x[0]),
                    'start': x[2],
                    'end': x[3]} for x in c.fetchall()]
-    return render_template('list.html', interviews=interviews)
+
+    params['interviews'] = interviews
+    return render_template('list.html', **params)
+    # return render_template('list.html', interviews=interviews)
 
 
 @app.route('/create-interview', methods=['POST', 'GET'])
 def createInterview():
+    params = {}
+    c.execute('SELECT name from users;')
+    params['users'] = [x[0] for x in c.fetchall()]
+
     if request.method == 'POST':
-        name = request.form['name']
-        users = request.form['users'].split(';')
-        start = request.form['start']
-        end = request.form['end']
+        name = request.form['name'].strip()
+        users = request.form['users'].strip().split(';')
+        start = request.form['start'].strip()
+        end = request.form['end'].strip()
         if '' in [name, users, start, end]:
             return render_template('create.html', error="All fields are required")
 
         UID = []
-        users = list(dict.fromkeys(users))
+        users = list(dict.fromkeys([user.strip() for user in users]))
         for user in users:
-            user = user.strip()
             with conn:
                 c.execute(f'SELECT id from users where name="{user}";')
             temp = c.fetchone()
@@ -103,10 +114,12 @@ def createInterview():
                 temp = temp[0]
                 UID.append(temp)
             else:
-                return render_template('create.html', error=f"No user found with name '{user}'")
+                params['error'] = f"No user found with name '{user}'"
+                return render_template('create.html', **params)
 
         if len(UID) < 2:
-            return render_template('create.html', error="alteast 2 users needed")
+            params['error'] = "alteast 2 users needed"
+            return render_template('create.html', **params)
 
         start = start.replace('T', ' ') + ':00'
         end = end.replace('T', ' ') + ':00'
@@ -118,27 +131,98 @@ def createInterview():
             if not compatible((start, end), times):
                 with conn:
                     c.execute(f'Select name from users where id = {id}')
-                return render_template('create.html', error=f"user '{c.fetchone()[0]}' is not available in given schedule")
+
+                params['error'] = f"user '{c.fetchone()[0]}' is not available in given schedule"
+                return render_template('create.html', **params)
 
         with conn:
             c.execute(
                 f'INSERT INTO interviews(name, start, end) values("{name}", "{start}","{end}");')
             c.execute(f'SELECT last_insert_rowid()')
             Iid = c.fetchone()[0]
-            print(Iid, type(Iid))
             for id in UID:
                 c.execute(
                     f'INSERT INTO interuser values({Iid}, {id});')
-
-        return render_template('create.html', success=True)
+        params['success'] = True
+        return render_template('create.html', **params)
     else:
-        return render_template('create.html')
+        return render_template('create.html', **params)
 
 
-@app.route('/edit-interview/<int:interviewid>')
+@app.route('/edit-interview/<int:interviewid>', methods=['POST', 'GET'])
 def editInterview(interviewid):
+    with conn:
+        c.execute(f'select * from interviews where id = {interviewid}')
+        x = c.fetchone()
 
-    return render_template('edit.html')
+    params = {}
+    c.execute('SELECT name from users;')
+    params['users'] = [x[0] for x in c.fetchall()]
+    params['editform'] = True
+    params['fillformvalue'] = {
+        'id': interviewid,
+        'name': x[1],
+        'users': '; '.join(getUsers(interviewid)),
+        'start': x[2].replace(' ', 'T')[:-3],
+        'end': x[3].replace(' ', 'T')[:-3]
+    }
+
+    if request.method == 'POST':
+        name = request.form['name'].strip()
+        users = request.form['users'].strip().split(';')
+        start = request.form['start'].strip()
+        end = request.form['end'].strip()
+        if '' in [name, users, start, end]:
+            return render_template('create.html', error="All fields are required")
+
+        UID = []
+        users = list(dict.fromkeys([user.strip() for user in users]))
+        for user in users:
+            with conn:
+                c.execute(f'SELECT id from users where name="{user}";')
+            temp = c.fetchone()
+            if temp is not None:
+                temp = temp[0]
+                UID.append(temp)
+            else:
+                params['error'] = f"No user found with name '{user}'"
+                return render_template('create.html', **params)
+
+        if len(UID) < 2:
+            params['error'] = "alteast 2 users needed"
+            return render_template('create.html', **params)
+
+        start = start.replace('T', ' ') + ':00'
+        end = end.replace('T', ' ') + ':00'
+        for id in UID:
+            with conn:
+                c.execute(
+                    f'select start, end from interviews where id in (SELECT interviewid FROM interuser where userid = {id}) and id !={interviewid}')
+                times = c.fetchall()
+            if not compatible((start, end), times):
+                with conn:
+                    c.execute(f'Select name from users where id = {id}')
+
+                params['error'] = f"user '{c.fetchone()[0]}' is not available in given schedule"
+                return render_template('create.html', **params)
+
+        with conn:
+            c.execute(
+                f'update interviews set name = "{name}",start="{start}", end="{end}" where id = {interviewid}')
+            c.execute(
+                f'select userid from interuser where interviewid={interviewid}')
+            oldUID = [x[0] for x in c.fetchall()]
+            for id in set(oldUID)-set(UID):
+                c.execute(
+                    f'DELETE FROM interuser where interviewid={interviewid} and userid={id};')
+
+            for id in set(UID)-set(oldUID):
+                c.execute(
+                    f'INSERT INTO interuser values({interviewid}, {id});')
+
+        return redirect(url_for('home'))
+    else:
+        return render_template('create.html', **params)
 
 
 if __name__ == "__main__":
