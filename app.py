@@ -50,12 +50,14 @@ c.execute('INSERT into interuser values(3,5);')
 conn.commit()
 
 
+def f(x): return datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
+
+
 def compatible(X, L):
-    def f(x): return datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
     S = f(X[0])
     E = f(X[1])
     for (s, e) in L:
-        s = f(e)
+        s = f(s)
         e = f(e)
         if not (E <= s or e <= S):
             return False
@@ -98,7 +100,7 @@ def createInterview():
 
     if request.method == 'POST':
         name = request.form['name'].strip()
-        users = request.form['users'].strip().split(';')
+        users = request.form['users'].strip().split()
         start = request.form['start'].strip()
         end = request.form['end'].strip()
         if '' in [name, users, start, end]:
@@ -123,6 +125,9 @@ def createInterview():
 
         start = start.replace('T', ' ') + ':00'
         end = end.replace('T', ' ') + ':00'
+        if f(start) >= f(end):
+            params['error'] = "start time should be lessthan end time"
+            return render_template('create.html', **params)
         for id in UID:
             with conn:
                 c.execute(
@@ -162,14 +167,14 @@ def editInterview(interviewid):
     params['fillformvalue'] = {
         'id': interviewid,
         'name': x[1],
-        'users': '; '.join(getUsers(interviewid)),
+        'users': ' '.join(getUsers(interviewid)),
         'start': x[2].replace(' ', 'T')[:-3],
         'end': x[3].replace(' ', 'T')[:-3]
     }
 
     if request.method == 'POST':
         name = request.form['name'].strip()
-        users = request.form['users'].strip().split(';')
+        users = request.form['users'].strip().split()
         start = request.form['start'].strip()
         end = request.form['end'].strip()
         if '' in [name, users, start, end]:
@@ -194,6 +199,10 @@ def editInterview(interviewid):
 
         start = start.replace('T', ' ') + ':00'
         end = end.replace('T', ' ') + ':00'
+        if f(start) >= f(end):
+            params['error'] = "start time should be lessthan end time"
+            return render_template('create.html', **params)
+
         for id in UID:
             with conn:
                 c.execute(
